@@ -1,10 +1,12 @@
 package com.sky.service.impl;
 
+import com.sky.dto.GoodsSalesDTO;
 import com.sky.entity.Orders;
 import com.sky.mapper.OrderMapper;
 import com.sky.mapper.UserMapper;
 import com.sky.service.ReportService;
 import com.sky.vo.OrderReportVO;
+import com.sky.vo.SalesTop10ReportVO;
 import com.sky.vo.TurnoverReportVO;
 import com.sky.vo.UserReportVO;
 import io.swagger.models.auth.In;
@@ -20,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -127,7 +130,7 @@ public class ReportServiceImpl implements ReportService {
      * @param end
      * @return
      */
-    public OrderReportVO geOrderStatistics(LocalDate begin, LocalDate end) {
+    public OrderReportVO getOrderStatistics(LocalDate begin, LocalDate end) {
         // 存放从begin到end之间的每天对应的日期
         List<LocalDate> dateList = new ArrayList<>();
 
@@ -176,6 +179,32 @@ public class ReportServiceImpl implements ReportService {
                 .totalOrderCount(totalOrderCount)
                 .validOrderCount(validOrderCount)
                 .orderCompletionRate(orderCompletionRate)
+                .build();
+    }
+
+    /**
+     * 统计指定时间区间内的销量排名top10
+     * @param begin
+     * @param end
+     * @return
+     */
+    public SalesTop10ReportVO getSalesTop10(LocalDate begin, LocalDate end) {
+        // select od.name, sum(od.number) number from order_datail od, order o where od.order_id = o.id and o.status = 5 and o.order_time > '2022-10-01' and o.order_time < '2022-10-31' group by od.name order by sum(od.number) desc limit 0,10
+        LocalDateTime beginTime = LocalDateTime.of(begin, LocalTime.MIN);
+        LocalDateTime endTime = LocalDateTime.of(end, LocalTime.MAX);
+
+        List<GoodsSalesDTO> salesTop10 =orderMapper.getSalesTop10(beginTime, endTime);
+        List<String> names = salesTop10.stream().map(GoodsSalesDTO::getName).collect(Collectors.toList());
+        String nameList = StringUtils.join(names, ",");
+
+        List<Integer> numbers = salesTop10.stream().map(GoodsSalesDTO::getNumber).collect(Collectors.toList());
+        String numberList = StringUtils.join(numbers, ",");
+
+        // 封装返回结果数据
+        return SalesTop10ReportVO
+                .builder()
+                .nameList(nameList)
+                .numberList(numberList)
                 .build();
     }
 
